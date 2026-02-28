@@ -386,17 +386,21 @@ fn render_power_chart(
         _ => app.viewport.visible_range(),
     };
 
-    // Dynamic y-axis bounds based on visible data
+    // Dynamic y-axis bounds based on visible data, symmetric around zero
     let min_power = data.iter().map(|(_, y)| *y).fold(f64::INFINITY, f64::min);
     let max_power = data
         .iter()
         .map(|(_, y)| *y)
         .fold(f64::NEG_INFINITY, f64::max);
     let y_margin = (max_power - min_power).abs() * 0.1 + 0.5;
-    let y_min = (min_power - y_margin).min(-0.5);
-    let y_max = (max_power + y_margin).max(0.5);
+    let y_abs_max = (max_power + y_margin).abs().max((min_power - y_margin).abs()).max(0.5);
+    let y_min = -y_abs_max;
+    let y_max = y_abs_max;
 
     let x_labels = time_axis_labels_for_range(app, vp_start, vp_end, samples);
+
+    // Zero reference line across the visible x range
+    let zero_line: Vec<(f64, f64)> = vec![(vp_start, 0.0), (vp_end, 0.0)];
 
     let datasets = vec![
         Dataset::default()
@@ -405,6 +409,12 @@ fn render_power_chart(
             .graph_type(GraphType::Line)
             .style(Style::default().fg(Color::Yellow))
             .data(&data),
+        Dataset::default()
+            .name("0W")
+            .marker(symbols::Marker::Dot)
+            .graph_type(GraphType::Line)
+            .style(Style::default().fg(Color::DarkGray))
+            .data(&zero_line),
     ];
 
     let chart = Chart::new(datasets)
@@ -427,7 +437,9 @@ fn render_power_chart(
                 .bounds([y_min, y_max])
                 .labels(vec![
                     Span::raw(format!("{:.1}", y_min)),
+                    Span::raw(format!("{:.1}", y_min / 2.0)),
                     Span::raw("0"),
+                    Span::raw(format!("{:.1}", y_max / 2.0)),
                     Span::raw(format!("{:.1}", y_max)),
                 ]),
         );
