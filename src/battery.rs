@@ -31,8 +31,8 @@ impl fmt::Display for BatteryStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BatterySample {
     pub timestamp: DateTime<Local>,
-    pub capacity: f64,       // percent 0-100
-    pub power_watts: f64,    // watts (positive = charging, negative = discharging)
+    pub capacity: f64,    // percent 0-100
+    pub power_watts: f64, // watts (positive = charging, negative = discharging)
     pub status: BatteryStatus,
     pub energy_now_wh: f64,  // watt-hours
     pub energy_full_wh: f64, // watt-hours
@@ -55,12 +55,12 @@ impl BatteryReader {
         for entry in fs::read_dir(ps_path).ok()? {
             let entry = entry.ok()?;
             let type_path = entry.path().join("type");
-            if let Ok(ptype) = fs::read_to_string(&type_path) {
-                if ptype.trim() == "Battery" {
-                    return Some(BatteryReader {
-                        base_path: entry.path(),
-                    });
-                }
+            if let Ok(ptype) = fs::read_to_string(&type_path)
+                && ptype.trim() == "Battery"
+            {
+                return Some(BatteryReader {
+                    base_path: entry.path(),
+                });
             }
         }
         None

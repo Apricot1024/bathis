@@ -1,13 +1,11 @@
 use chrono::Timelike;
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     symbols,
     text::{Line, Span},
-    widgets::{
-        Axis, Block, Borders, Chart, Dataset, GraphType, List, ListItem, Paragraph, Wrap,
-    },
-    Frame,
+    widgets::{Axis, Block, Borders, Chart, Dataset, GraphType, List, ListItem, Paragraph, Wrap},
 };
 
 use crate::app::{App, View};
@@ -62,7 +60,7 @@ fn render_dashboard(f: &mut Frame, app: &App) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(3), // title bar
-            Constraint::Min(8),   // status area
+            Constraint::Min(8),    // status area
             Constraint::Length(3), // help bar
         ])
         .split(f.area());
@@ -74,10 +72,17 @@ fn render_dashboard(f: &mut Frame, app: &App) {
 
 fn render_title_bar(f: &mut Frame, area: Rect, app: &App) {
     let title = format!(" ⚡ bathis — {} ", app.battery_name);
-    let block = Paragraph::new(Line::from(vec![
-        Span::styled(title, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-    ]))
-    .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(Color::DarkGray)));
+    let block = Paragraph::new(Line::from(vec![Span::styled(
+        title,
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    )]))
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::DarkGray)),
+    );
     f.render_widget(block, area);
 }
 
@@ -120,16 +125,33 @@ fn render_status_panel(f: &mut Frame, area: Rect, app: &App) {
     let info_lines = vec![
         Line::from(vec![
             Span::raw("  Status:   "),
-            Span::styled(format!("{}", sample.status), Style::default().fg(status_color).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                format!("{}", sample.status),
+                Style::default()
+                    .fg(status_color)
+                    .add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(""),
         Line::from(vec![
             Span::raw("  Battery:  "),
-            Span::styled(format!("{:.1}%", sample.capacity), Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                format!("{:.1}%", sample.capacity),
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(vec![
             Span::raw("            "),
-            Span::styled(&bar, Style::default().fg(if sample.capacity > 20.0 { Color::Green } else { Color::Red })),
+            Span::styled(
+                &bar,
+                Style::default().fg(if sample.capacity > 20.0 {
+                    Color::Green
+                } else {
+                    Color::Red
+                }),
+            ),
         ]),
         Line::from(""),
         Line::from(vec![
@@ -138,19 +160,29 @@ fn render_status_panel(f: &mut Frame, area: Rect, app: &App) {
         ]),
         Line::from(vec![
             Span::raw("  Voltage:  "),
-            Span::styled(format!("{:.3} V", sample.voltage_now_v), Style::default().fg(Color::White)),
+            Span::styled(
+                format!("{:.3} V", sample.voltage_now_v),
+                Style::default().fg(Color::White),
+            ),
         ]),
         Line::from(vec![
             Span::raw("  Energy:   "),
             Span::styled(
-                format!("{:.2} / {:.2} Wh", sample.energy_now_wh, sample.energy_full_wh),
+                format!(
+                    "{:.2} / {:.2} Wh",
+                    sample.energy_now_wh, sample.energy_full_wh
+                ),
                 Style::default().fg(Color::White),
             ),
         ]),
     ];
 
     let info = Paragraph::new(info_lines)
-        .block(Block::default().borders(Borders::ALL).title(" Battery Info "))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" Battery Info "),
+        )
         .wrap(Wrap { trim: false });
     f.render_widget(info, chunks[0]);
 
@@ -159,9 +191,10 @@ fn render_status_panel(f: &mut Frame, area: Rect, app: &App) {
     let mut session_items: Vec<ListItem> = Vec::new();
 
     if sessions.is_empty() {
-        session_items.push(ListItem::new(Line::from(
-            Span::styled("  No completed charge sessions yet", Style::default().fg(Color::DarkGray)),
-        )));
+        session_items.push(ListItem::new(Line::from(Span::styled(
+            "  No completed charge sessions yet",
+            Style::default().fg(Color::DarkGray),
+        ))));
     } else {
         for (i, session) in sessions.iter().enumerate().rev() {
             let duration = session
@@ -176,32 +209,42 @@ fn render_status_panel(f: &mut Frame, area: Rect, app: &App) {
                 format_duration(duration),
                 session.start_time.format("%m/%d %H:%M"),
             );
-            session_items.push(ListItem::new(Line::from(
-                Span::styled(line, Style::default().fg(Color::White)),
-            )));
+            session_items.push(ListItem::new(Line::from(Span::styled(
+                line,
+                Style::default().fg(Color::White),
+            ))));
         }
     }
 
     let sample_count = app.history.all_samples().len();
-    let session_list = List::new(session_items).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title(format!(" Charge Sessions (90%+)  |  {} samples ", sample_count)),
-    );
+    let session_list =
+        List::new(session_items).block(Block::default().borders(Borders::ALL).title(format!(
+            " Charge Sessions (90%+)  |  {} samples ",
+            sample_count
+        )));
     f.render_widget(session_list, chunks[1]);
 }
 
 fn render_help_bar(f: &mut Frame, area: Rect, app: &App) {
     let help_text = match app.view {
         View::Dashboard => " [h] History Chart  [1/2] Session Detail  [q] Quit ",
-        View::HistoryChart => " [d] Dashboard  [←/→] Pan  [+/-] Zoom  [f] Fit  [1/2] Session  [q] Quit ",
-        View::SessionDetail(_) => " [d] Dashboard  [h] History  [←/→] Pan  [+/-] Zoom  [f] Fit  [q] Quit ",
+        View::HistoryChart => {
+            " [d] Dashboard  [←/→] Pan  [+/-] Zoom  [f] Fit  [1/2] Session  [q] Quit "
+        }
+        View::SessionDetail(_) => {
+            " [d] Dashboard  [h] History  [←/→] Pan  [+/-] Zoom  [f] Fit  [q] Quit "
+        }
     };
 
-    let help = Paragraph::new(Line::from(
-        Span::styled(help_text, Style::default().fg(Color::DarkGray)),
-    ))
-    .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(Color::DarkGray)));
+    let help = Paragraph::new(Line::from(Span::styled(
+        help_text,
+        Style::default().fg(Color::DarkGray),
+    )))
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::DarkGray)),
+    );
     f.render_widget(help, area);
 }
 
@@ -211,10 +254,10 @@ fn render_history_chart(f: &mut Frame, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // title
+            Constraint::Length(3),      // title
             Constraint::Percentage(50), // capacity chart
             Constraint::Percentage(50), // power chart
-            Constraint::Length(3),  // help
+            Constraint::Length(3),      // help
         ])
         .split(f.area());
 
@@ -224,7 +267,12 @@ fn render_history_chart(f: &mut Frame, app: &App) {
     render_help_bar(f, chunks[3], app);
 }
 
-fn render_capacity_chart(f: &mut Frame, area: Rect, app: &App, samples: &[crate::battery::BatterySample]) {
+fn render_capacity_chart(
+    f: &mut Frame,
+    area: Rect,
+    app: &App,
+    samples: &[crate::battery::BatterySample],
+) {
     if samples.is_empty() {
         let msg = Paragraph::new("No data yet")
             .block(Block::default().borders(Borders::ALL).title(" Battery % "));
@@ -235,7 +283,10 @@ fn render_capacity_chart(f: &mut Frame, area: Rect, app: &App, samples: &[crate:
     let data: Vec<(f64, f64)> = match app.view {
         View::SessionDetail(_idx) => {
             let (t_start, t_end) = app.session_viewport.visible_range();
-            let session_start = samples.first().map(|s| app.time_to_x(&s.timestamp)).unwrap_or(0.0);
+            let session_start = samples
+                .first()
+                .map(|s| app.time_to_x(&s.timestamp))
+                .unwrap_or(0.0);
             samples
                 .iter()
                 .map(|s| (app.time_to_x(&s.timestamp) - session_start, s.capacity))
@@ -259,12 +310,14 @@ fn render_capacity_chart(f: &mut Frame, area: Rect, app: &App, samples: &[crate:
 
     let x_labels = time_axis_labels_for_range(app, vp_start, vp_end, samples);
 
-    let datasets = vec![Dataset::default()
-        .name("Battery %")
-        .marker(symbols::Marker::Braille)
-        .graph_type(GraphType::Line)
-        .style(Style::default().fg(Color::Green))
-        .data(&data)];
+    let datasets = vec![
+        Dataset::default()
+            .name("Battery %")
+            .marker(symbols::Marker::Braille)
+            .graph_type(GraphType::Line)
+            .style(Style::default().fg(Color::Green))
+            .data(&data),
+    ];
 
     let chart = Chart::new(datasets)
         .block(Block::default().borders(Borders::ALL).title(" Battery % "))
@@ -292,7 +345,12 @@ fn render_capacity_chart(f: &mut Frame, area: Rect, app: &App, samples: &[crate:
     f.render_widget(chart, area);
 }
 
-fn render_power_chart(f: &mut Frame, area: Rect, app: &App, samples: &[crate::battery::BatterySample]) {
+fn render_power_chart(
+    f: &mut Frame,
+    area: Rect,
+    app: &App,
+    samples: &[crate::battery::BatterySample],
+) {
     if samples.is_empty() {
         let msg = Paragraph::new("No data yet")
             .block(Block::default().borders(Borders::ALL).title(" Power (W) "));
@@ -303,7 +361,10 @@ fn render_power_chart(f: &mut Frame, area: Rect, app: &App, samples: &[crate::ba
     let data: Vec<(f64, f64)> = match app.view {
         View::SessionDetail(_idx) => {
             let (t_start, t_end) = app.session_viewport.visible_range();
-            let session_start = samples.first().map(|s| app.time_to_x(&s.timestamp)).unwrap_or(0.0);
+            let session_start = samples
+                .first()
+                .map(|s| app.time_to_x(&s.timestamp))
+                .unwrap_or(0.0);
             samples
                 .iter()
                 .map(|s| (app.time_to_x(&s.timestamp) - session_start, s.power_watts))
@@ -327,22 +388,31 @@ fn render_power_chart(f: &mut Frame, area: Rect, app: &App, samples: &[crate::ba
 
     // Dynamic y-axis bounds based on visible data
     let min_power = data.iter().map(|(_, y)| *y).fold(f64::INFINITY, f64::min);
-    let max_power = data.iter().map(|(_, y)| *y).fold(f64::NEG_INFINITY, f64::max);
+    let max_power = data
+        .iter()
+        .map(|(_, y)| *y)
+        .fold(f64::NEG_INFINITY, f64::max);
     let y_margin = (max_power - min_power).abs() * 0.1 + 0.5;
     let y_min = (min_power - y_margin).min(-0.5);
     let y_max = (max_power + y_margin).max(0.5);
 
     let x_labels = time_axis_labels_for_range(app, vp_start, vp_end, samples);
 
-    let datasets = vec![Dataset::default()
-        .name("Power")
-        .marker(symbols::Marker::Braille)
-        .graph_type(GraphType::Line)
-        .style(Style::default().fg(Color::Yellow))
-        .data(&data)];
+    let datasets = vec![
+        Dataset::default()
+            .name("Power")
+            .marker(symbols::Marker::Braille)
+            .graph_type(GraphType::Line)
+            .style(Style::default().fg(Color::Yellow))
+            .data(&data),
+    ];
 
     let chart = Chart::new(datasets)
-        .block(Block::default().borders(Borders::ALL).title(" Power (W) — +charge / -discharge "))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" Power (W) — +charge / -discharge "),
+        )
         .x_axis(
             Axis::default()
                 .title("Time")
@@ -409,11 +479,11 @@ fn render_session_detail(f: &mut Frame, app: &App, idx: usize) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // title
-            Constraint::Length(4),  // session info
+            Constraint::Length(3),      // title
+            Constraint::Length(4),      // session info
             Constraint::Percentage(50), // capacity chart
             Constraint::Percentage(50), // power chart
-            Constraint::Length(3),  // help
+            Constraint::Length(3),      // help
         ])
         .split(f.area());
 
@@ -436,7 +506,11 @@ fn render_session_detail(f: &mut Frame, app: &App, idx: usize) {
         info_text,
         Style::default().fg(Color::Cyan),
     )))
-    .block(Block::default().borders(Borders::ALL).title(format!(" Charge Session {} ", idx + 1)));
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(format!(" Charge Session {} ", idx + 1)),
+    );
     f.render_widget(info, chunks[1]);
 
     render_capacity_chart(f, chunks[2], app, &session.samples);

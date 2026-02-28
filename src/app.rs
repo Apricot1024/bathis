@@ -136,7 +136,7 @@ impl App {
         self.tick_count += 1;
 
         // Auto-save every 60 ticks (~5 min at 5s interval)
-        if self.tick_count % 60 == 0 {
+        if self.tick_count.is_multiple_of(60) {
             self.history.save();
         }
     }
@@ -177,10 +177,9 @@ impl App {
 
     /// Update viewport to fit current data
     pub fn fit_viewport(&mut self) {
-        if let (Some(first), Some(last)) = (
-            self.history.samples.first(),
-            self.history.samples.last(),
-        ) {
+        if let (Some(first), Some(last)) =
+            (self.history.samples.first(), self.history.samples.last())
+        {
             let total = self.time_to_x(&last.timestamp) - self.time_to_x(&first.timestamp);
             self.viewport.fit_data(total);
         }
@@ -188,13 +187,11 @@ impl App {
 
     /// Update session viewport to fit session data
     pub fn fit_session_viewport(&mut self, session_idx: usize) {
-        if let Some(session) = self.history.completed_sessions().get(session_idx) {
-            if let (Some(first), Some(last)) =
-                (session.samples.first(), session.samples.last())
-            {
-                let total = self.time_to_x(&last.timestamp) - self.time_to_x(&first.timestamp);
-                self.session_viewport.fit_data(total);
-            }
+        if let Some(session) = self.history.completed_sessions().get(session_idx)
+            && let (Some(first), Some(last)) = (session.samples.first(), session.samples.last())
+        {
+            let total = self.time_to_x(&last.timestamp) - self.time_to_x(&first.timestamp);
+            self.session_viewport.fit_data(total);
         }
     }
 
